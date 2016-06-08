@@ -1,10 +1,9 @@
 <?php
-$currency = @$_GET['currency'] ? htmlspecialchars($_GET['currency']) : 'usd';
-
 require_once(__DIR__ . '/config.php');
 require_once(__DIR__ . '/functions.php');
 require_once(__DIR__ . '/bitfinex.php');
 
+$currency = isset($_GET['currency']) ? htmlspecialchars($_GET['currency']) : 'usd';
 $config = getConfig($currency);
 
 $bfx = new Bitfinex($config['api_key'], $config['api_secret']);
@@ -13,8 +12,10 @@ $current_offers = $bfx->get_offers();
 
 // Something is wrong most likely API key
 if (array_key_exists('message', $current_offers)) {
-	die($current_offers['message']);
+	message($current_offers['message'], 'ERROR');
+	exit(1);
 }
+d($current_offers, 'offers');
 
 // Remove offers that weren't executed for too long
 foreach ($current_offers as $item) {
@@ -24,7 +25,7 @@ foreach ($current_offers as $item) {
 	$diff_minutes = round(($current_timestamp - $timestamp) / 60);
 
 	if ($config['remove_after'] <= $diff_minutes) {
-		message("Removing offer # $id");
+		message("Removing offer # $id after {$config['remove_after']} minutes");
 
 		$bfx->cancel_offer($id);
 	}
@@ -32,10 +33,11 @@ foreach ($current_offers as $item) {
 
 $balances = $bfx->get_balances();
 $available_balance = 0;
+d($balances, 'balances');
 
 if ($balances) {
 	foreach ($balances as $item) {
-		if ($item['type'] == 'deposit' && $item['currency'] == strtolower($config['currency'])) {
+		if ($item['type'] === 'deposit' && $item['currency'] === strtolower($config['currency'])) {
 			$available_balance = floatval($item['available']);
 
 			break;
@@ -48,7 +50,9 @@ if ($available_balance >= $config['minimum_balance']) {
 	message("Lending availabe balance of $available_balance");
 
 	$lendbook = $bfx->get_lendbook($config['currency']);
+//	d($lendbook, 'lendbook');
 	$offers = $lendbook['asks'];
+	d($offers, 'offers');
 
 	$total_amount = 0;
 	$next_rate = 0;
@@ -74,13 +78,26 @@ if ($available_balance >= $config['minimum_balance']) {
 	}
 
 	// Current rate is too low, move closer to the next rate
-	if ($next_amount <= $config['max_total_swaps']) {
-		$rate = $next_rate - 0.01;
-	}
+	// ???
+//	if ($next_amount <= $config['max_total_swaps']) {
+//		$rate = $next_rate - 0.01;
+//	}
 
 	$daily_rate = daily_rate($rate);
+	$daily_next_rate = daily_rate($next_rate);
 
-	$result = $bfx->new_offer($config['currency'], (string) $available_balance, (string) $rate, $config['period'], 'lend');
+	// if there's a gap between current rate & next rate bigger than one `tick`
+	// make the rate as high as possible below the next_rate
+	if ($daily_next_rate - $daily_rate > 0.0001) {
+		$daily_rate = $daily_next_rate - 0.0001;
+		$rate = $daily_rate * 365;
+	}
+	d([$daily_rate, $rate, $daily_next_rate, $next_rate], 'rates');
+//	die;
+
+	// todo: do not lend all money at once
+	$lendingAmount = (string) $available_balance;
+	$result = $bfx->new_offer($config['currency'], $lendingAmount, (string) $rate, $config['period'], 'lend');
 
 	// Successfully lent
 	if (array_key_exists('id', $result)) {
