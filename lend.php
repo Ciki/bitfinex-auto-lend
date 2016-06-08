@@ -1,9 +1,11 @@
 <?php
 $currency = @$_GET['currency'] ? htmlspecialchars($_GET['currency']) : 'usd';
 
-require_once(__DIR__ . "/config-$currency.php");
+require_once(__DIR__ . '/config.php');
 require_once(__DIR__ . '/functions.php');
 require_once(__DIR__ . '/bitfinex.php');
+
+$config = getConfig($currency);
 
 $bfx = new Bitfinex($config['api_key'], $config['api_secret']);
 

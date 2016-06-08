@@ -3,6 +3,8 @@ require_once(__DIR__ . '/config.php');
 require_once(__DIR__ . '/functions.php');
 require_once(__DIR__ . '/bitfinex.php');
 
+$config = getConfig();
+
 $bfx = new Bitfinex($config['api_key'], $config['api_secret']);
 
 $current_offers = $bfx->get_offers();
