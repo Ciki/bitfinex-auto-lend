@@ -1,6 +1,5 @@
 <?php
-
-include_once(__DIR__ . '/config.php');
+require_once(__DIR__ . '/config.php');
 
 $config['currency'] = 'BTC'; // Currency to lend
 $config['period'] = 2; // Number of days to lend
@@ -11,5 +10,3 @@ $config['max_total_swaps'] = 50; // Minutes after unexecuted offer gets cancelle
 // * If there are e.g. total of 40 swaps at 1%/day and 60
 // swaps at 1.001%/day the script chooses the lower rate, because
 // we don't want to go beyond the rate of 50 swaps.
-
-?>

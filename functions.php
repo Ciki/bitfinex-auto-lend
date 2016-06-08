@@ -7,14 +7,15 @@ function array_debug($array)
 	echo '</pre>';
 }
 
+
 function message($message)
 {
 	echo "MESSAGE: $message<br />";
 }
 
+
 function daily_rate($rate)
 {
-	return round($rate/365, 4);
+	return round($rate / 365, 4);
 }
 
-?>
